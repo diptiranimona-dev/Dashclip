@@ -1,0 +1,1032 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ScriptForge V2</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Syne:wght@400;600;700;800&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg:#0a0a0a; --surface:#111; --surface2:#161616; --border:#222; --muted:#2a2a2a;
+      --text:#e8e2d6; --sub:#6a6460; --amber:#f5a623; --amber2:#c47d0e;
+      --green:#4ade80; --red:#f87171; --blue:#60a5fa; --purple:#a78bfa;
+      --mono:'Space Mono',monospace; --sans:'Syne',sans-serif; --r:4px;
+    }
+    html,body { background:var(--bg); color:var(--text); font-family:var(--sans); min-height:100vh; }
+    ::-webkit-scrollbar{width:5px} ::-webkit-scrollbar-track{background:var(--bg)} ::-webkit-scrollbar-thumb{background:var(--muted);border-radius:3px}
+
+    /* HEADER */
+    header { padding:16px 32px; border-bottom:1px solid var(--border); display:flex; align-items:center; gap:16px; position:sticky; top:0; background:rgba(10,10,10,.96); backdrop-filter:blur(8px); z-index:100; }
+    .logo { font-family:var(--mono); font-size:16px; font-weight:700; color:var(--amber); }
+    .logo span { color:var(--text); }
+    .logo sub { font-size:9px; color:var(--sub); vertical-align:super; }
+    .project-title-input { background:transparent; border:none; color:var(--text); font-family:var(--sans); font-size:14px; font-weight:600; outline:none; border-bottom:1px solid transparent; padding:2px 6px; transition:.15s; max-width:200px; }
+    .project-title-input:focus { border-bottom-color:var(--amber); }
+    .header-right { margin-left:auto; display:flex; gap:10px; align-items:center; }
+    .save-badge { font-family:var(--mono); font-size:10px; color:var(--sub); }
+
+    /* STEP NAV */
+    .step-nav { display:flex; border:1px solid var(--border); border-radius:var(--r); overflow:hidden; }
+    .step-btn { padding:6px 14px; font-family:var(--mono); font-size:11px; background:transparent; border:none; color:var(--sub); cursor:pointer; transition:.15s; border-right:1px solid var(--border); white-space:nowrap; }
+    .step-btn:last-child { border-right:none; }
+    .step-btn.active { background:var(--amber); color:#000; font-weight:700; }
+    .step-btn.done { color:var(--green); }
+    .step-btn:disabled { opacity:.3; cursor:not-allowed; }
+
+    /* LAYOUT */
+    main { max-width:1000px; margin:0 auto; padding:36px 24px 80px; }
+    .panel { display:none; animation:fadeUp .2s ease; }
+    .panel.active { display:block; }
+    @keyframes fadeUp { from{opacity:0;transform:translateY(10px)} to{opacity:1;transform:translateY(0)} }
+    .section-tag { font-family:var(--mono); font-size:10px; color:var(--amber); letter-spacing:2px; text-transform:uppercase; margin-bottom:6px; }
+    h1 { font-size:32px; font-weight:800; line-height:1.1; margin-bottom:4px; }
+    h2 { font-size:18px; font-weight:700; margin-bottom:12px; }
+    h3 { font-size:14px; font-weight:700; margin-bottom:8px; color:var(--sub); text-transform:uppercase; letter-spacing:.5px; font-family:var(--mono); }
+    .subtitle { color:var(--sub); font-size:14px; margin-bottom:28px; line-height:1.5; }
+
+    /* FORM */
+    textarea, input[type=text], input[type=url], select {
+      width:100%; background:var(--surface); border:1px solid var(--border); border-radius:var(--r);
+      color:var(--text); font-family:var(--mono); font-size:13px; padding:12px 14px; outline:none; transition:.15s;
+    }
+    textarea { resize:vertical; line-height:1.6; }
+    textarea:focus, input:focus, select:focus { border-color:var(--amber); }
+    select option { background:var(--surface); }
+    label { display:block; font-family:var(--mono); font-size:11px; color:var(--sub); margin-bottom:6px; letter-spacing:1px; text-transform:uppercase; }
+
+    /* BUTTONS */
+    .btn { font-family:var(--mono); font-size:12px; font-weight:700; padding:9px 18px; border-radius:var(--r); border:none; cursor:pointer; transition:.15s; display:inline-flex; align-items:center; gap:7px; white-space:nowrap; }
+    .btn:disabled { opacity:.35; cursor:not-allowed; }
+    .btn-primary { background:var(--amber); color:#000; }
+    .btn-primary:hover:not(:disabled) { background:#ffb84d; }
+    .btn-ghost { background:transparent; color:var(--text); border:1px solid var(--border); }
+    .btn-ghost:hover:not(:disabled) { border-color:var(--amber); color:var(--amber); }
+    .btn-sm { padding:5px 11px; font-size:11px; }
+    .btn-danger { background:transparent; color:var(--red); border:1px solid #3a1515; }
+    .btn-purple { background:var(--purple); color:#000; }
+    .btn-row { display:flex; gap:10px; align-items:center; margin-top:18px; flex-wrap:wrap; }
+
+    /* SPINNER */
+    .spinner { width:13px; height:13px; border:2px solid rgba(245,166,35,.3); border-top-color:var(--amber); border-radius:50%; animation:spin .7s linear infinite; display:inline-block; }
+    @keyframes spin { to{transform:rotate(360deg)} }
+
+    /* TOAST */
+    #toast { position:fixed; bottom:20px; right:20px; background:var(--surface); border:1px solid var(--border); border-radius:var(--r); padding:10px 16px; font-family:var(--mono); font-size:12px; z-index:999; opacity:0; transform:translateY(6px); transition:.2s; max-width:300px; }
+    #toast.show { opacity:1; transform:translateY(0); }
+    #toast.tok { border-color:var(--green); color:var(--green); }
+    #toast.terr { border-color:var(--red); color:var(--red); }
+
+    /* CARDS */
+    .card { background:var(--surface); border:1px solid var(--border); border-radius:6px; overflow:hidden; }
+    .card-header { padding:14px 18px; border-bottom:1px solid var(--border); display:flex; align-items:center; gap:10px; }
+    .card-body { padding:18px; }
+    .scene-num { font-family:var(--mono); font-size:11px; background:var(--amber); color:#000; font-weight:700; padding:2px 7px; border-radius:2px; }
+    .kw-tag { font-family:var(--mono); font-size:10px; padding:2px 7px; border:1px solid var(--muted); border-radius:2px; color:var(--sub); }
+
+    /* CLIPS GRID */
+    .clips-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(150px,1fr)); gap:10px; }
+    .clip-card { position:relative; border-radius:var(--r); overflow:hidden; cursor:pointer; border:2px solid transparent; transition:border-color .15s; background:var(--bg); aspect-ratio:16/9; }
+    .clip-card:hover { border-color:var(--amber2); }
+    .clip-card.selected { border-color:var(--amber); }
+    .clip-card.selected::after { content:'✓'; position:absolute; top:5px; right:7px; font-size:13px; font-weight:700; color:var(--amber); text-shadow:0 0 5px rgba(0,0,0,.9); }
+    .clip-thumb { width:100%; height:100%; object-fit:cover; display:block; }
+    .clip-duration { position:absolute; bottom:5px; right:7px; font-family:var(--mono); font-size:10px; color:#fff; background:rgba(0,0,0,.55); padding:1px 5px; border-radius:2px; }
+    .clip-loading { display:flex; align-items:center; gap:8px; padding:18px; color:var(--sub); font-family:var(--mono); font-size:12px; grid-column:1/-1; }
+
+    /* TABS */
+    .tabs { display:flex; gap:0; border:1px solid var(--border); border-radius:var(--r); overflow:hidden; margin-bottom:16px; }
+    .tab { flex:1; padding:8px; font-family:var(--mono); font-size:11px; font-weight:700; background:transparent; border:none; color:var(--sub); cursor:pointer; transition:.15s; border-right:1px solid var(--border); }
+    .tab:last-child { border-right:none; }
+    .tab.active { background:var(--surface2); color:var(--text); }
+
+    /* VOICEOVER / MUSIC PANELS */
+    .asset-panel { display:none; }
+    .asset-panel.active { display:block; }
+    .search-results { margin-top:12px; display:flex; flex-direction:column; gap:8px; max-height:280px; overflow-y:auto; }
+    .result-row { display:flex; align-items:center; gap:10px; padding:10px 12px; background:var(--surface2); border:1px solid var(--border); border-radius:var(--r); }
+    .result-title { flex:1; font-size:13px; }
+    .result-meta { font-family:var(--mono); font-size:10px; color:var(--sub); }
+
+    /* TIMELINE */
+    .timeline { display:flex; flex-direction:column; gap:8px; }
+    .tl-row { display:flex; align-items:center; gap:10px; padding:10px 14px; background:var(--surface); border:1px solid var(--border); border-radius:var(--r); font-size:13px; }
+    .tl-num { font-family:var(--mono); font-size:10px; background:var(--amber); color:#000; font-weight:700; padding:2px 6px; border-radius:2px; min-width:48px; text-align:center; }
+    .tl-thumb { width:56px; height:32px; border-radius:2px; object-fit:cover; background:var(--muted); flex-shrink:0; }
+    .tl-desc { flex:1; color:var(--sub); font-size:12px; }
+    .tl-dur { font-family:var(--mono); font-size:10px; color:var(--sub); }
+    .tl-badge { font-family:var(--mono); font-size:10px; padding:2px 6px; border-radius:2px; }
+    .tl-badge.ok { background:#1a3a1a; color:var(--green); }
+    .tl-badge.miss { background:#3a1a1a; color:var(--red); }
+    .tl-divider { border:none; border-top:1px dashed var(--border); margin:4px 0; }
+
+    /* PROGRESS */
+    .progress-wrap { background:var(--muted); border-radius:2px; height:5px; margin:12px 0 6px; overflow:hidden; }
+    .progress-fill { height:100%; background:var(--amber); border-radius:2px; transition:width .4s ease; }
+    .progress-label { font-family:var(--mono); font-size:11px; color:var(--sub); }
+
+    /* DOWNLOAD */
+    .download-box { margin-top:20px; padding:18px; background:#0c1a0c; border:1px solid #1a3a1a; border-radius:var(--r); text-align:center; }
+    .download-box p { color:var(--green); font-family:var(--mono); font-size:13px; margin-bottom:14px; }
+
+    /* PROJECTS LIST */
+    .projects-list { display:flex; flex-direction:column; gap:8px; }
+    .project-row { display:flex; align-items:center; gap:12px; padding:12px 16px; background:var(--surface); border:1px solid var(--border); border-radius:var(--r); cursor:pointer; transition:.15s; }
+    .project-row:hover { border-color:var(--amber); }
+    .project-row-title { font-weight:600; flex:1; }
+    .project-row-meta { font-family:var(--mono); font-size:10px; color:var(--sub); }
+    .status-dot { width:7px; height:7px; border-radius:50%; background:var(--muted); }
+    .status-dot.rendered { background:var(--green); }
+    .status-dot.draft { background:var(--amber); }
+
+    /* AD PLACEHOLDER */
+    .ad-placeholder { border:1px dashed var(--muted); border-radius:var(--r); padding:14px; text-align:center; font-family:var(--mono); font-size:10px; color:var(--muted); margin:16px 0; }
+
+    .divider { border:none; border-top:1px solid var(--border); margin:24px 0; }
+    .info-box { background:var(--surface2); border:1px solid var(--border); border-radius:var(--r); padding:12px 14px; font-family:var(--mono); font-size:12px; color:var(--sub); line-height:1.7; margin-bottom:14px; }
+    .grid2 { display:grid; grid-template-columns:1fr 1fr; gap:16px; }
+    @media(max-width:600px){ .grid2{grid-template-columns:1fr} header{padding:12px 14px} h1{font-size:24px} }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="logo">Script<span>Forge</span> <sub>V2</sub></div>
+  <input class="project-title-input" id="project-title" value="Untitled Project" placeholder="Project name…" oninput="onTitleChange()" />
+  <div class="header-right">
+    <span class="save-badge" id="save-badge"></span>
+    <button class="btn btn-ghost btn-sm" onclick="openProjectsPanel()">📁 Projects</button>
+    <button class="btn btn-ghost btn-sm" onclick="saveProject()">💾 Save</button>
+  </div>
+</header>
+
+<!-- STEP NAV (hidden when projects panel open) -->
+<div style="padding:12px 32px; border-bottom:1px solid var(--border); background:var(--bg); display:flex; gap:8px; align-items:center;" id="step-nav-bar">
+  <div class="step-nav" id="step-nav">
+    <button class="step-btn active" data-step="1" onclick="goToStep(1)">01 Script</button>
+    <button class="step-btn" data-step="2" onclick="goToStep(2)" disabled>02 Scenes</button>
+    <button class="step-btn" data-step="3" onclick="goToStep(3)" disabled>03 Clips</button>
+    <button class="step-btn" data-step="4" onclick="goToStep(4)" disabled>04 Audio</button>
+    <button class="step-btn" data-step="5" onclick="goToStep(5)" disabled>05 Timeline</button>
+    <button class="step-btn" data-step="6" onclick="goToStep(6)" disabled>06 Render</button>
+  </div>
+</div>
+
+<main>
+
+<!-- ════════════════════════════════════════ -->
+<!-- PROJECTS PANEL (overlay)               -->
+<!-- ════════════════════════════════════════ -->
+<div class="panel" id="panel-projects">
+  <p class="section-tag">My Projects</p>
+  <h1>Projects</h1>
+  <p class="subtitle">Open an existing project or start a new one.</p>
+  <div class="btn-row" style="margin-bottom:20px;">
+    <button class="btn btn-primary" onclick="newProject()">+ New Project</button>
+    <button class="btn btn-ghost" onclick="closeProjectsPanel()">← Back</button>
+  </div>
+  <div class="projects-list" id="projects-list">
+    <div style="color:var(--sub);font-family:var(--mono);font-size:12px;">Loading…</div>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════ -->
+<!-- PANEL 1: SCRIPT                        -->
+<!-- ════════════════════════════════════════ -->
+<div class="panel active" id="panel-1">
+  <p class="section-tag">Step 01</p>
+  <h1>Your Script</h1>
+  <p class="subtitle">Write a script or let AI generate one. Be descriptive — the more visual, the better.</p>
+
+  <div class="card" style="margin-bottom:16px;">
+    <div class="card-body">
+      <label>✦ Generate with AI (Ollama)</label>
+      <div style="display:flex;gap:10px;">
+        <input type="text" id="gen-prompt" placeholder="e.g. 'A calm morning routine in a minimalist Tokyo apartment'" style="flex:1;min-height:unset;" />
+        <button class="btn btn-ghost" onclick="generateScript()" id="gen-btn">Generate</button>
+      </div>
+    </div>
+  </div>
+
+  <textarea id="script-input" style="min-height:220px;" placeholder="Write your script here…&#10;&#10;The camera opens on a serene mountain lake at dawn…&#10;A lone figure sits at a coffee shop window, typing…"></textarea>
+
+  <div class="btn-row">
+    <button class="btn btn-primary" onclick="continueToScenes()" id="continue-btn">Continue to Scenes →</button>
+    <span id="char-count" style="font-family:var(--mono);font-size:11px;color:var(--sub);"></span>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════ -->
+<!-- PANEL 2: SCENES                        -->
+<!-- ════════════════════════════════════════ -->
+<div class="panel" id="panel-2">
+  <p class="section-tag">Step 02</p>
+  <h1>Scene Breakdown</h1>
+  <p class="subtitle">AI breaks your script into visual, filmable scenes with stock-video keywords.</p>
+  <div id="scenes-loading" style="display:none;" class="clip-loading"><div class="spinner"></div> Analysing with AI…</div>
+  <div id="scenes-container" style="display:flex;flex-direction:column;gap:12px;"></div>
+  <div class="btn-row" id="scenes-btn-row" style="display:none;">
+    <button class="btn btn-primary" onclick="continueToClips()">Fetch Clips →</button>
+    <button class="btn btn-ghost" onclick="goToStep(1)">← Back</button>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════ -->
+<!-- PANEL 3: CLIPS                         -->
+<!-- ════════════════════════════════════════ -->
+<div class="panel" id="panel-3">
+  <p class="section-tag">Step 03</p>
+  <h1>Select Clips</h1>
+  <p class="subtitle">Pick one clip per scene. Clips are ranked by quality and relevance.</p>
+  <!-- Ad placeholder: after_clip_finding -->
+  <div class="ad-placeholder">[ Ad slot: after_clip_finding — disabled in V1 ]</div>
+  <div id="clips-container" style="display:flex;flex-direction:column;gap:24px;"></div>
+  <div class="btn-row" id="clips-btn-row" style="display:none;margin-top:24px;">
+    <button class="btn btn-primary" onclick="goToStep(4)">Continue to Audio →</button>
+    <button class="btn btn-ghost" onclick="goToStep(2)">← Back</button>
+    <span id="selection-status" style="font-family:var(--mono);font-size:11px;color:var(--sub);"></span>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════ -->
+<!-- PANEL 4: AUDIO (Voiceover + Music)     -->
+<!-- ════════════════════════════════════════ -->
+<div class="panel" id="panel-4">
+  <p class="section-tag">Step 04</p>
+  <h1>Audio</h1>
+  <p class="subtitle">Add a voiceover and background music (both optional).</p>
+
+  <div class="grid2">
+
+    <!-- VOICEOVER -->
+    <div>
+      <h2>🎙 Voiceover</h2>
+      <div class="tabs">
+        <button class="tab active" onclick="voiceTab('ai',this)">AI Generated</button>
+        <button class="tab" onclick="voiceTab('upload',this)">Upload</button>
+        <button class="tab" onclick="voiceTab('search',this)">Search</button>
+      </div>
+
+      <!-- AI TTS -->
+      <div class="asset-panel active" id="voice-ai">
+        <label>Narration text</label>
+        <textarea id="tts-text" style="min-height:100px;" placeholder="Paste your narration here, or click 'From Script' to auto-generate…"></textarea>
+        <div style="display:flex;gap:8px;margin-top:8px;flex-wrap:wrap;">
+          <button class="btn btn-ghost btn-sm" onclick="narrationFromScript()">From Script</button>
+          <select id="voice-select" style="flex:1;padding:7px 10px;"></select>
+        </div>
+        <div class="btn-row">
+          <button class="btn btn-primary btn-sm" onclick="generateTTS()" id="tts-btn">Generate Voice</button>
+        </div>
+        <div id="tts-result" style="display:none;margin-top:10px;" class="info-box"></div>
+      </div>
+
+      <!-- Upload -->
+      <div class="asset-panel" id="voice-upload">
+        <label>Upload audio file (MP3, WAV, M4A)</label>
+        <input type="file" id="voice-file" accept=".mp3,.wav,.m4a,.ogg,.aac" onchange="uploadVoice()" style="padding:8px;" />
+        <div id="voice-upload-result" style="display:none;margin-top:10px;" class="info-box"></div>
+      </div>
+
+      <!-- Search -->
+      <div class="asset-panel" id="voice-search">
+        <label>Search for spoken audio</label>
+        <div style="display:flex;gap:8px;">
+          <input type="text" id="voice-search-q" placeholder="e.g. 'calm narration'" style="flex:1;min-height:unset;" />
+          <button class="btn btn-ghost btn-sm" onclick="searchVoice()" id="voice-search-btn">Search</button>
+        </div>
+        <div class="search-results" id="voice-search-results"></div>
+      </div>
+
+      <div id="voiceover-selected" style="display:none;margin-top:12px;" class="info-box">
+        ✓ Voiceover selected (ID: <span id="vo-id-display"></span>)
+        <button class="btn btn-danger btn-sm" style="margin-left:8px;" onclick="clearVoiceover()">Remove</button>
+      </div>
+    </div>
+
+    <!-- MUSIC -->
+    <div>
+      <h2>🎵 Background Music</h2>
+      <div class="tabs">
+        <button class="tab active" onclick="musicTab('search',this)">Search Pixabay</button>
+        <button class="tab" onclick="musicTab('upload',this)">Upload</button>
+        <button class="tab" onclick="musicTab('manual',this)">Manual</button>
+      </div>
+
+      <!-- Search -->
+      <div class="asset-panel active" id="music-search">
+        <label>Search copyright-free music</label>
+        <div style="display:flex;gap:8px;">
+          <input type="text" id="music-search-q" placeholder="e.g. 'ambient calm'" style="flex:1;min-height:unset;" />
+          <button class="btn btn-ghost btn-sm" onclick="searchMusic()" id="music-search-btn">Search</button>
+        </div>
+        <div class="search-results" id="music-search-results"></div>
+      </div>
+
+      <!-- Upload -->
+      <div class="asset-panel" id="music-upload">
+        <label>Upload music file (MP3, WAV, FLAC…)</label>
+        <input type="file" id="music-file" accept=".mp3,.wav,.m4a,.ogg,.aac,.flac" onchange="uploadMusic()" style="padding:8px;" />
+        <div id="music-upload-result" style="display:none;margin-top:10px;" class="info-box"></div>
+      </div>
+
+      <!-- Manual -->
+      <div class="asset-panel" id="music-manual">
+        <label>Song title or paste URL</label>
+        <input type="text" id="music-manual-title" placeholder="e.g. 'Lofi Study Beat'" style="margin-bottom:8px;" />
+        <input type="url" id="music-manual-url" placeholder="https://… (optional direct link)" />
+        <div class="btn-row">
+          <button class="btn btn-ghost btn-sm" onclick="addManualMusic()">Add Track</button>
+        </div>
+      </div>
+
+      <div id="music-selected" style="display:none;margin-top:12px;" class="info-box">
+        ✓ Music: <span id="music-title-display"></span>
+        <button class="btn btn-danger btn-sm" style="margin-left:8px;" onclick="clearMusic()">Remove</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- SUBTITLES -->
+  <hr class="divider" />
+  <h2>📝 Subtitles</h2>
+  <div class="grid2">
+    <div>
+      <label>Narration text for subtitles</label>
+      <textarea id="subtitle-text" style="min-height:80px;" placeholder="Paste narration (same as voiceover text)…"></textarea>
+    </div>
+    <div>
+      <label>Subtitle preset</label>
+      <select id="subtitle-preset" style="margin-bottom:10px;">
+        <option value="minimal">Minimal (clean white, small)</option>
+        <option value="cinematic">Cinematic (bold, larger)</option>
+      </select>
+      <label>Estimated total video duration (seconds)</label>
+      <input type="text" id="subtitle-duration" placeholder="e.g. 30" />
+    </div>
+  </div>
+  <div class="btn-row">
+    <button class="btn btn-ghost btn-sm" onclick="generateSubtitles()" id="sub-btn">Generate Subtitles</button>
+    <span id="sub-status" style="font-family:var(--mono);font-size:11px;color:var(--sub);"></span>
+  </div>
+
+  <div class="btn-row" style="margin-top:28px;">
+    <button class="btn btn-primary" onclick="goToStep(5)">Continue to Timeline →</button>
+    <button class="btn btn-ghost" onclick="goToStep(3)">← Back</button>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════ -->
+<!-- PANEL 5: TIMELINE                      -->
+<!-- ════════════════════════════════════════ -->
+<div class="panel" id="panel-5">
+  <p class="section-tag">Step 05</p>
+  <h1>Timeline Preview</h1>
+  <p class="subtitle">Review your full video structure before rendering.</p>
+  <div id="timeline-container" class="timeline"></div>
+  <div id="timeline-summary" style="margin-top:16px;" class="info-box"></div>
+  <div class="btn-row" style="margin-top:20px;">
+    <button class="btn btn-primary" onclick="goToStep(6)">Continue to Render →</button>
+    <button class="btn btn-ghost" onclick="goToStep(4)">← Back</button>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════ -->
+<!-- PANEL 6: RENDER                        -->
+<!-- ════════════════════════════════════════ -->
+<div class="panel" id="panel-6">
+  <p class="section-tag">Step 06</p>
+  <h1>Render Video</h1>
+  <p class="subtitle">Combine all clips, audio, and subtitles into a final MP4.</p>
+  <!-- Ad placeholder: before_render -->
+  <div class="ad-placeholder">[ Ad slot: before_render — disabled in V1 ]</div>
+  <div id="render-summary" class="card" style="margin-bottom:20px;"><div class="card-body" id="render-summary-body"></div></div>
+  <div class="btn-row">
+    <button class="btn btn-primary" onclick="startRender()" id="render-btn">▶ Render Final Video</button>
+    <button class="btn btn-ghost" onclick="goToStep(5)">← Back</button>
+  </div>
+  <div id="render-progress-section" style="display:none;margin-top:24px;">
+    <h2 id="render-status-title">Rendering…</h2>
+    <div class="progress-wrap"><div class="progress-fill" id="render-progress" style="width:0%"></div></div>
+    <p class="progress-label" id="render-progress-label">Queued…</p>
+    <div class="download-box" id="download-box" style="display:none;">
+      <p>✓ Your video is ready!</p>
+      <a id="download-link" class="btn btn-primary" href="#" download>↓ Download MP4</a>
+    </div>
+  </div>
+</div>
+
+</main>
+<div id="toast"></div>
+
+<script>
+/* ═══════════════════════════════════════════════════
+   CONSTANTS & STATE
+════════════════════════════════════════════════════ */
+const API = 'http://localhost:8000';
+
+const S = {
+  projectId: null,
+  scenes: [],
+  clips: {},       // {sceneId: [clip,...]}
+  selected: {},    // {sceneId: clipId}
+  voiceoverId: null,
+  musicId: null,
+  subtitleId: null,
+  subtitlePreset: 'minimal',
+  renderJobId: null,
+  titleChanged: false,
+};
+
+/* ═══════════════════════════════════════════════════
+   UTILS
+════════════════════════════════════════════════════ */
+const API_URL = u => `${API}${u}`;
+
+async function api(method, path, body=null, isForm=false) {
+  const opts = { method, headers:{} };
+  if (body && !isForm) { opts.headers['Content-Type']='application/json'; opts.body=JSON.stringify(body); }
+  if (body && isForm) { opts.body=body; }
+  const r = await fetch(API_URL(path), opts);
+  const data = await r.json().catch(()=>({}));
+  if (!r.ok) throw new Error(data.detail || `HTTP ${r.status}`);
+  return data;
+}
+
+function toast(msg, type='ok') {
+  const el=document.getElementById('toast');
+  el.textContent=msg; el.className=`show t${type}`;
+  clearTimeout(el._t); el._t=setTimeout(()=>el.className='',3000);
+}
+function esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+function fmt(s){if(!s)return'';const m=Math.floor(s/60),sec=Math.floor(s%60);return m>0?`${m}:${String(sec).padStart(2,'0')}`:`${sec}s`;}
+
+function setLoading(btn,on,text=''){
+  if(on){btn._orig=btn.innerHTML;btn.innerHTML=`<div class="spinner"></div> ${text}`;btn.disabled=true;}
+  else{btn.innerHTML=btn._orig||text;btn.disabled=false;}
+}
+
+function enableStep(n){
+  const b=document.querySelector(`[data-step="${n}"]`);
+  b.disabled=false; b.classList.add('done');
+}
+function goToStep(n){
+  document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
+  document.getElementById(`panel-${n}`)?.classList.add('active');
+  document.querySelectorAll('.step-btn').forEach(b=>b.classList.remove('active'));
+  document.querySelector(`[data-step="${n}"]`)?.classList.add('active');
+  window.scrollTo({top:0,behavior:'smooth'});
+}
+
+/* ═══════════════════════════════════════════════════
+   PROJECTS
+════════════════════════════════════════════════════ */
+function openProjectsPanel(){
+  document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
+  document.getElementById('panel-projects').classList.add('active');
+  loadProjectsList();
+}
+function closeProjectsPanel(){
+  document.getElementById('panel-projects').classList.remove('active');
+  document.getElementById(`panel-${S.currentStep||1}`).classList.add('active');
+}
+
+async function loadProjectsList(){
+  const list=document.getElementById('projects-list');
+  try {
+    const projects = await api('GET','/projects');
+    if(!projects.length){list.innerHTML=`<div style="color:var(--sub);font-family:var(--mono);font-size:12px;">No projects yet. Create one!</div>`;return;}
+    list.innerHTML=projects.map(p=>`
+      <div class="project-row" onclick="openProject(${p.id})">
+        <div class="status-dot ${p.status}"></div>
+        <div class="project-row-title">${esc(p.title||'Untitled')}</div>
+        <div class="project-row-meta">${p.status} · ${new Date(p.created_at).toLocaleDateString()}</div>
+      </div>
+    `).join('');
+  } catch(e){list.innerHTML=`<div style="color:var(--red);font-family:var(--mono);font-size:12px;">Error: ${e.message}</div>`;}
+}
+
+async function newProject(){
+  const title = prompt('Project name:', 'My Video') || 'Untitled Project';
+  const p = await api('POST',`/projects/create?title=${encodeURIComponent(title)}`);
+  S.projectId=p.id;
+  document.getElementById('project-title').value=p.title||'Untitled Project';
+  closeProjectsPanel();
+  goToStep(1);
+  toast('New project created');
+}
+
+async function openProject(id){
+  try {
+    const p = await api('GET',`/projects/${id}`);
+    S.projectId=p.project.id;
+    S.scenes=p.scenes||[];
+    document.getElementById('project-title').value=p.project.title||'Untitled';
+    document.getElementById('script-input').value=p.project.script||'';
+
+    // Restore selected clips
+    S.selected={};
+    for(const scene of S.scenes){
+      S.clips[scene.id]=scene.clips||[];
+      const sel=scene.clips?.find(c=>c.selected);
+      if(sel) S.selected[scene.id]=sel.id;
+    }
+
+    closeProjectsPanel();
+    if(S.scenes.length){
+      renderSceneList();
+      enableStep(2);
+      renderClipSelectionUI();
+      enableStep(3);
+      goToStep(3);
+    } else {
+      goToStep(1);
+    }
+    toast(`Opened: ${p.project.title}`);
+  } catch(e){toast(`Error: ${e.message}`,'err');}
+}
+
+async function saveProject(){
+  if(!S.projectId){
+    const p=await api('POST','/projects/create?title='+encodeURIComponent(document.getElementById('project-title').value||'Untitled'));
+    S.projectId=p.id;
+  }
+  await api('POST',`/projects/${S.projectId}/save`,{
+    title:document.getElementById('project-title').value,
+    script:document.getElementById('script-input').value
+  });
+  document.getElementById('save-badge').textContent='Saved ✓';
+  setTimeout(()=>document.getElementById('save-badge').textContent='',2000);
+}
+
+function onTitleChange(){ document.getElementById('save-badge').textContent='Unsaved'; }
+
+document.getElementById('script-input').addEventListener('input',function(){
+  document.getElementById('char-count').textContent=this.value.length?`${this.value.length} chars`:'';
+});
+
+/* ═══════════════════════════════════════════════════
+   STEP 1 — SCRIPT
+════════════════════════════════════════════════════ */
+async function generateScript(){
+  const prompt=document.getElementById('gen-prompt').value.trim();
+  if(!prompt){toast('Enter a prompt','err');return;}
+  const btn=document.getElementById('gen-btn');
+  setLoading(btn,true,'Generating…');
+  try {
+    const d=await api('POST','/generate-script',{prompt});
+    document.getElementById('script-input').value=d.script;
+    document.getElementById('script-input').dispatchEvent(new Event('input'));
+    toast('Script generated!');
+  } catch(e){toast(e.message,'err');}
+  finally{setLoading(btn,false,'Generate');}
+}
+
+async function continueToScenes(){
+  const script=document.getElementById('script-input').value.trim();
+  if(script.length<20){toast('Script too short','err');return;}
+  const btn=document.getElementById('continue-btn');
+  setLoading(btn,true,'Analysing…');
+  document.getElementById('scenes-loading').style.display='flex';
+  try {
+    const d=await api('POST','/generate-scenes',{script,project_id:S.projectId});
+    S.projectId=d.project_id;
+    S.scenes=d.scenes;
+    renderSceneList();
+    enableStep(2);
+    goToStep(2);
+    toast(`${S.scenes.length} scenes ready`);
+  } catch(e){toast(e.message,'err');}
+  finally{setLoading(btn,false,'Continue to Scenes →');document.getElementById('scenes-loading').style.display='none';}
+}
+
+/* ═══════════════════════════════════════════════════
+   STEP 2 — SCENES
+════════════════════════════════════════════════════ */
+function renderSceneList(){
+  const c=document.getElementById('scenes-container');
+  c.innerHTML=S.scenes.map(s=>`
+    <div class="card">
+      <div class="card-header">
+        <span class="scene-num">SCENE ${s.scene}</span>
+        <span style="flex:1;font-size:14px;font-weight:600;">${esc(s.description)}</span>
+        <span style="font-family:var(--mono);font-size:10px;color:var(--sub);">${s.duration_hint||6}s</span>
+      </div>
+      <div style="padding:10px 16px;display:flex;gap:6px;flex-wrap:wrap;">
+        ${(s.keywords||[]).map(k=>`<span class="kw-tag">${esc(k)}</span>`).join('')}
+      </div>
+    </div>
+  `).join('');
+  document.getElementById('scenes-btn-row').style.display='flex';
+}
+
+function continueToClips(){
+  enableStep(3);
+  goToStep(3);
+  renderClipSelectionUI();
+}
+
+/* ═══════════════════════════════════════════════════
+   STEP 3 — CLIPS
+════════════════════════════════════════════════════ */
+function renderClipSelectionUI(){
+  const c=document.getElementById('clips-container');
+  c.innerHTML=S.scenes.map(s=>`
+    <div class="card">
+      <div class="card-header">
+        <span class="scene-num">SCENE ${s.scene}</span>
+        <span style="flex:1;font-size:14px;font-weight:600;">${esc(s.description)}</span>
+        <div style="display:flex;gap:6px;flex-wrap:wrap;">
+          ${(s.keywords||[]).map(k=>`<span class="kw-tag">${esc(k)}</span>`).join('')}
+        </div>
+      </div>
+      <div class="card-body">
+        <div class="clips-grid" id="clips-grid-${s.id}">
+          <div class="clip-loading"><div class="spinner"></div> Fetching clips…</div>
+        </div>
+      </div>
+    </div>
+  `).join('');
+  document.getElementById('clips-btn-row').style.display='flex';
+  updateSelectionStatus();
+  S.scenes.forEach(s=>fetchClipsForScene(s.id));
+}
+
+async function fetchClipsForScene(sceneId){
+  const grid=document.getElementById(`clips-grid-${sceneId}`);
+  if(!grid)return;
+  try {
+    const d=await api('GET',`/fetch-clips?scene_id=${sceneId}&per_page=5`);
+    S.clips[sceneId]=d.clips||[];
+    renderClipCards(sceneId);
+  } catch(e){
+    if(grid) grid.innerHTML=`<div class="clip-loading" style="color:var(--red);">Error: ${esc(e.message)}</div>`;
+  }
+}
+
+function renderClipCards(sceneId){
+  const grid=document.getElementById(`clips-grid-${sceneId}`);
+  const clips=S.clips[sceneId]||[];
+  if(!clips.length){grid.innerHTML=`<div class="clip-loading">No clips found.</div>`;return;}
+  grid.innerHTML=clips.map(c=>`
+    <div class="clip-card ${S.selected[sceneId]===c.id?'selected':''}" id="clip-${c.id}" onclick="selectClip(${sceneId},${c.id})">
+      ${c.thumbnail_url?`<img class="clip-thumb" src="${esc(c.thumbnail_url)}" loading="lazy" onerror="this.style.display='none'" />`:'<div style="width:100%;height:100%;background:var(--muted);"></div>'}
+      ${c.duration?`<span class="clip-duration">${fmt(c.duration)}</span>`:''}
+    </div>
+  `).join('');
+}
+
+async function selectClip(sceneId,clipId){
+  try {
+    await api('POST','/select-clip',{clip_id:clipId,scene_id:sceneId});
+    S.selected[sceneId]=clipId;
+    renderClipCards(sceneId);
+    updateSelectionStatus();
+  } catch(e){toast(e.message,'err');}
+}
+
+function updateSelectionStatus(){
+  const total=S.scenes.length, sel=Object.keys(S.selected).length;
+  const el=document.getElementById('selection-status');
+  if(el) el.textContent=`${sel} / ${total} clips selected`;
+}
+
+/* ═══════════════════════════════════════════════════
+   STEP 4 — AUDIO
+════════════════════════════════════════════════════ */
+function voiceTab(name,btn){
+  document.querySelectorAll('#panel-4 .asset-panel[id^=voice]').forEach(p=>p.classList.remove('active'));
+  document.getElementById(`voice-${name}`).classList.add('active');
+  btn.closest('.tabs').querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+  btn.classList.add('active');
+}
+function musicTab(name,btn){
+  document.querySelectorAll('#panel-4 .asset-panel[id^=music]').forEach(p=>p.classList.remove('active'));
+  document.getElementById(`music-${name}`).classList.add('active');
+  btn.closest('.tabs').querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+  btn.classList.add('active');
+}
+
+// Load voice options on page load
+async function loadVoiceOptions(){
+  try{
+    const opts=await api('GET','/voice/options');
+    const sel=document.getElementById('voice-select');
+    sel.innerHTML=opts.map(o=>`<option value="${o.id}">${o.label}</option>`).join('');
+  }catch(e){}
+}
+
+async function narrationFromScript(){
+  const script=document.getElementById('script-input').value.trim();
+  if(!script){toast('Write a script first','err');return;}
+  document.getElementById('tts-text').value=script;
+}
+
+async function generateTTS(){
+  if(!S.projectId){toast('Save project first','err');return;}
+  const text=document.getElementById('tts-text').value.trim();
+  if(!text){toast('Enter narration text','err');return;}
+  const voice=document.getElementById('voice-select').value;
+  const btn=document.getElementById('tts-btn');
+  setLoading(btn,true,'Generating…');
+  try{
+    const d=await api('POST','/voice/tts',{project_id:S.projectId,text,voice_id:voice});
+    S.voiceoverId=d.id;
+    document.getElementById('tts-result').style.display='block';
+    document.getElementById('tts-result').textContent=`✓ Generated (${fmt(d.duration)}) — ID ${d.id}`;
+    showVoiceoverSelected(d.id);
+    toast('Voiceover ready!');
+  }catch(e){toast(e.message,'err');}
+  finally{setLoading(btn,false,'Generate Voice');}
+}
+
+async function uploadVoice(){
+  if(!S.projectId){toast('Save project first','err');return;}
+  const file=document.getElementById('voice-file').files[0];
+  if(!file)return;
+  const form=new FormData();
+  form.append('project_id',S.projectId);
+  form.append('file',file);
+  try{
+    const d=await api('POST','/voice/upload',form,true);
+    S.voiceoverId=d.id;
+    document.getElementById('voice-upload-result').style.display='block';
+    document.getElementById('voice-upload-result').textContent=`✓ Uploaded (${fmt(d.duration)}) — ID ${d.id}`;
+    showVoiceoverSelected(d.id);
+    toast('Voiceover uploaded!');
+  }catch(e){toast(e.message,'err');}
+}
+
+async function searchVoice(){
+  const q=document.getElementById('voice-search-q').value.trim();
+  if(!q)return;
+  const btn=document.getElementById('voice-search-btn');
+  setLoading(btn,true,'Searching…');
+  try{
+    const results=await api('POST','/voice/search',{query:q});
+    const c=document.getElementById('voice-search-results');
+    if(!results.length){c.innerHTML=`<div style="color:var(--sub);font-family:var(--mono);font-size:12px;">No results</div>`;return;}
+    c.innerHTML=results.map(r=>`
+      <div class="result-row">
+        <div class="result-title">${esc(r.title||'Unknown')}</div>
+        <div class="result-meta">${fmt(r.duration)}</div>
+        <button class="btn btn-ghost btn-sm" onclick="useSearchedVoice('${esc(r.url)}','${esc(r.title||'')}')">Use</button>
+      </div>
+    `).join('');
+  }catch(e){toast(e.message,'err');}
+  finally{setLoading(btn,false,'Search');}
+}
+
+async function useSearchedVoice(url,title){
+  if(!S.projectId){toast('Save project first','err');return;}
+  try{
+    const d=await api('POST','/voice/search/save',{project_id:S.projectId,url,title});
+    S.voiceoverId=d.id;
+    showVoiceoverSelected(d.id);
+    toast('Voiceover saved!');
+  }catch(e){toast(e.message,'err');}
+}
+
+function showVoiceoverSelected(id){
+  S.voiceoverId=id;
+  document.getElementById('voiceover-selected').style.display='block';
+  document.getElementById('vo-id-display').textContent=id;
+}
+function clearVoiceover(){S.voiceoverId=null;document.getElementById('voiceover-selected').style.display='none';}
+
+async function searchMusic(){
+  const q=document.getElementById('music-search-q').value.trim();
+  if(!q)return;
+  const btn=document.getElementById('music-search-btn');
+  setLoading(btn,true,'Searching…');
+  try{
+    const results=await api('POST','/music/search',{query:q});
+    const c=document.getElementById('music-search-results');
+    if(!results.length){c.innerHTML=`<div style="color:var(--sub);font-family:var(--mono);font-size:12px;">No results</div>`;return;}
+    c.innerHTML=results.map(r=>`
+      <div class="result-row">
+        <div class="result-title">${esc(r.title)}</div>
+        <div class="result-meta">${fmt(r.duration)} · ${r.copyright_safe?'✓ Free':''}</div>
+        <button class="btn btn-ghost btn-sm" onclick="addMusic('${esc(r.title)}','${esc(r.url)}','${esc(r.preview_url||'')}',${r.duration||0})">Add</button>
+      </div>
+    `).join('');
+  }catch(e){toast(e.message,'err');}
+  finally{setLoading(btn,false,'Search');}
+}
+
+async function addMusic(title,url,previewUrl,duration){
+  if(!S.projectId){toast('Save project first','err');return;}
+  try{
+    const d=await api('POST','/music/add',{project_id:S.projectId,title,url,preview_url:previewUrl,duration});
+    S.musicId=d.id;
+    document.getElementById('music-selected').style.display='block';
+    document.getElementById('music-title-display').textContent=title;
+    toast('Music added!');
+  }catch(e){toast(e.message,'err');}
+}
+
+async function uploadMusic(){
+  if(!S.projectId){toast('Save project first','err');return;}
+  const file=document.getElementById('music-file').files[0];
+  if(!file)return;
+  const form=new FormData();
+  form.append('project_id',S.projectId);
+  form.append('file',file);
+  try{
+    const d=await api('POST','/music/upload',form,true);
+    S.musicId=d.id;
+    document.getElementById('music-upload-result').style.display='block';
+    document.getElementById('music-upload-result').textContent=`✓ ${file.name} uploaded`;
+    document.getElementById('music-selected').style.display='block';
+    document.getElementById('music-title-display').textContent=file.name;
+    toast('Music uploaded!');
+  }catch(e){toast(e.message,'err');}
+}
+
+async function addManualMusic(){
+  if(!S.projectId){toast('Save project first','err');return;}
+  const title=document.getElementById('music-manual-title').value.trim();
+  const url=document.getElementById('music-manual-url').value.trim();
+  if(!title){toast('Enter a title','err');return;}
+  try{
+    const d=await api('POST','/music/manual',{project_id:S.projectId,title,url});
+    S.musicId=d.id;
+    document.getElementById('music-selected').style.display='block';
+    document.getElementById('music-title-display').textContent=title;
+    toast('Music track added!');
+  }catch(e){toast(e.message,'err');}
+}
+
+function clearMusic(){S.musicId=null;document.getElementById('music-selected').style.display='none';}
+
+async function generateSubtitles(){
+  if(!S.projectId){toast('Save project first','err');return;}
+  const text=document.getElementById('subtitle-text').value.trim();
+  const dur=parseFloat(document.getElementById('subtitle-duration').value)||30;
+  const preset=document.getElementById('subtitle-preset').value;
+  if(!text){toast('Enter narration text for subtitles','err');return;}
+  const btn=document.getElementById('sub-btn');
+  setLoading(btn,true,'Generating…');
+  try{
+    const d=await api('POST','/subtitles/generate',{
+      project_id:S.projectId,narration_text:text,total_duration:dur,preset
+    });
+    S.subtitleId=d.id;
+    S.subtitlePreset=preset;
+    document.getElementById('sub-status').textContent=`✓ Subtitles ready (ID ${d.id})`;
+    toast('Subtitles generated!');
+  }catch(e){toast(e.message,'err');}
+  finally{setLoading(btn,false,'Generate Subtitles');}
+}
+
+/* ═══════════════════════════════════════════════════
+   STEP 5 — TIMELINE
+════════════════════════════════════════════════════ */
+function goToStep5(){
+  renderTimeline();
+  enableStep(5);
+  goToStep(5);
+}
+
+// Override goToStep for step 5 to render timeline
+const _origGoTo=goToStep;
+
+function renderTimeline(){
+  const c=document.getElementById('timeline-container');
+  let totalDur=0;
+
+  const rows=S.scenes.map(s=>{
+    const clipId=S.selected[s.id];
+    const clip=(S.clips[s.id]||[]).find(c=>c.id===clipId);
+    const dur=clip?.duration||s.duration_hint||6;
+    totalDur+=dur;
+
+    return `
+      <div class="tl-row">
+        <span class="tl-num">SCENE ${s.scene}</span>
+        ${clip?.thumbnail_url?`<img class="tl-thumb" src="${esc(clip.thumbnail_url)}" />`:'<div class="tl-thumb"></div>'}
+        <span class="tl-desc">${esc(s.description)}</span>
+        <span class="tl-dur">${fmt(dur)}</span>
+        <span class="tl-badge ${clipId?'ok':'miss'}">${clipId?'Clip ✓':'No clip'}</span>
+        ${S.voiceoverId?`<span class="tl-badge ok">VO</span>`:''}
+        ${S.subtitleId?`<span class="tl-badge ok">SUB</span>`:''}
+      </div>
+    `;
+  });
+
+  c.innerHTML=rows.join('<hr class="tl-divider" />');
+
+  document.getElementById('timeline-summary').innerHTML=
+    `Total scenes: <b>${S.scenes.length}</b> &nbsp;·&nbsp; ` +
+    `Est. duration: <b>~${fmt(totalDur)}</b> &nbsp;·&nbsp; ` +
+    `Clips selected: <b>${Object.keys(S.selected).length}/${S.scenes.length}</b> &nbsp;·&nbsp; ` +
+    `Voiceover: <b>${S.voiceoverId?'Yes':'No'}</b> &nbsp;·&nbsp; ` +
+    `Music: <b>${S.musicId?'Yes':'No'}</b> &nbsp;·&nbsp; ` +
+    `Subtitles: <b>${S.subtitleId?'Yes':'No'}</b>`;
+}
+
+/* ═══════════════════════════════════════════════════
+   STEP 6 — RENDER
+════════════════════════════════════════════════════ */
+function buildRenderSummary(){
+  const missing=S.scenes.filter(s=>!S.selected[s.id]);
+  const body=document.getElementById('render-summary-body');
+  body.innerHTML=`
+    <div style="font-family:var(--mono);font-size:12px;color:var(--sub);margin-bottom:12px;">
+      ${S.scenes.length} SCENES &nbsp;·&nbsp; ${Object.keys(S.selected).length} CLIPS &nbsp;·&nbsp;
+      Voiceover: ${S.voiceoverId?'✓':'—'} &nbsp;·&nbsp;
+      Music: ${S.musicId?'✓':'—'} &nbsp;·&nbsp;
+      Subtitles: ${S.subtitleId?'✓':'—'}
+    </div>
+    ${missing.length?`<div style="color:var(--red);font-family:var(--mono);font-size:12px;">⚠ Missing clips for: ${missing.map(s=>`Scene ${s.scene}`).join(', ')}</div>`:'<div style="color:var(--green);font-family:var(--mono);font-size:12px;">✓ All scenes have clips selected</div>'}
+  `;
+}
+
+async function startRender(){
+  const missing=S.scenes.filter(s=>!S.selected[s.id]);
+  if(missing.length){toast(`Missing clips for ${missing.length} scene(s)`,'err');return;}
+  if(!S.projectId){toast('Save project first','err');return;}
+
+  const btn=document.getElementById('render-btn');
+  setLoading(btn,true,'Starting…');
+
+  const clipIds=S.scenes.map(s=>S.selected[s.id]).filter(Boolean);
+
+  try{
+    const d=await api('POST','/render-video',{
+      project_id:S.projectId,
+      clip_ids:clipIds,
+      voiceover_id:S.voiceoverId||null,
+      music_id:S.musicId||null,
+      subtitle_id:S.subtitleId||null,
+      subtitle_preset:S.subtitlePreset||'minimal',
+    });
+    S.renderJobId=d.job_id;
+    document.getElementById('render-progress-section').style.display='block';
+    btn.style.display='none';
+    pollRender();
+  }catch(e){toast(e.message,'err');setLoading(btn,false,'▶ Render Final Video');}
+}
+
+const STATUS_MAP={
+  queued:'Queued…',downloading:'Downloading clips…',normalizing:'Normalizing video files…',
+  rendering:'Merging clips…','mixing voiceover':'Mixing voiceover…','mixing music':'Adding background music…',
+  'burning subtitles':'Burning subtitles…',completed:'✓ Done!',failed:'✗ Failed'
+};
+
+async function pollRender(){
+  if(!S.renderJobId)return;
+  try{
+    const d=await api('GET',`/render-status/${S.renderJobId}`);
+    document.getElementById('render-progress').style.width=`${d.progress||0}%`;
+    document.getElementById('render-progress-label').textContent=STATUS_MAP[d.status]||d.status;
+    document.getElementById('render-status-title').textContent=
+      d.status==='completed'?'Video Ready':d.status==='failed'?'Render Failed':'Rendering…';
+
+    if(d.status==='completed'){
+      const db=document.getElementById('download-box');
+      const dl=document.getElementById('download-link');
+      dl.href=`${API}${d.output}`;
+      dl.download='scriptforge_video.mp4';
+      db.style.display='block';
+      toast('Video ready!');
+    }else if(d.status==='failed'){
+      document.getElementById('render-progress-label').textContent=`Error: ${d.error}`;
+      toast(d.error,'err');
+      document.getElementById('render-btn').style.display='inline-flex';
+      document.getElementById('render-btn').disabled=false;
+      document.getElementById('render-btn').innerHTML='▶ Retry Render';
+    }else{
+      setTimeout(pollRender,1500);
+    }
+  }catch(e){setTimeout(pollRender,3000);}
+}
+
+/* ═══════════════════════════════════════════════════
+   STEP NAV OVERRIDE — wire step 5 + 6
+════════════════════════════════════════════════════ */
+window.goToStep=function(n){
+  if(n===5){
+    renderTimeline();
+    enableStep(5);
+  }
+  if(n===6){
+    buildRenderSummary();
+    enableStep(6);
+  }
+  document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
+  document.getElementById(`panel-${n}`)?.classList.add('active');
+  document.querySelectorAll('.step-btn').forEach(b=>b.classList.remove('active'));
+  document.querySelector(`[data-step="${n}"]`)?.classList.add('active');
+  S.currentStep=n;
+  window.scrollTo({top:0,behavior:'smooth'});
+};
+
+/* ═══════════════════════════════════════════════════
+   INIT
+════════════════════════════════════════════════════ */
+loadVoiceOptions();
+</script>
+</body>
+</html>

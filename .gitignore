@@ -1,0 +1,29 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+.Python
+venv/
+env/
+.env
+
+# Outputs and uploads (too large for GitHub)
+backend/outputs/
+backend/uploads/
+backend/tmp/
+backend/static/watermark.png
+
+# Database
+*.sql.backup
+
+# IDE
+.vscode/settings.json
+.idea/
+*.swp
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Node (if added later)
+node_modules/

@@ -1,0 +1,24 @@
+# DashClip V4 — Python Dependencies
+# Install: pip install -r requirements.txt --break-system-packages
+
+# Core
+fastapi==0.115.0
+uvicorn==0.30.6
+python-dotenv==1.0.1
+python-multipart==0.0.9
+
+# Database
+psycopg2-binary==2.9.9
+
+# HTTP client
+httpx==0.27.2
+aiofiles==24.1.0
+
+# AI (Ollama runs locally — no pip package needed)
+# Optional: anthropic==0.34.0  (for future Claude API)
+
+# Media
+edge-tts==6.1.12
+
+# Utilities
+Pillow==10.4.0
