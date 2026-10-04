@@ -1,0 +1,48 @@
+# render.yaml — Render deployment configuration
+# Place this file in your repo root
+services:
+  - type: web
+    name: dashclip
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    plan: starter
+    region: oregon
+    healthCheckPath: /health
+    envVars:
+      # Database — set in Render dashboard
+      - key: DATABASE_URL
+        sync: false
+      # AI Provider
+      - key: DASHCLIP_AI_PROVIDER
+        value: auto
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: GEMINI_MODEL
+        value: gemini-2.0-flash
+      # Storage
+      - key: STORAGE_BACKEND
+        value: supabase
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_SERVICE_KEY
+        sync: false
+      - key: SUPABASE_BUCKET
+        value: dashclip-media
+      # Stock footage
+      - key: PEXELS_API_KEY
+        sync: false
+      - key: PIXABAY_API_KEY
+        sync: false
+      # CORS — set to your Render URL
+      - key: ALLOWED_ORIGINS
+        sync: false
+      # File paths inside Docker
+      - key: OUTPUT_DIR
+        value: /tmp/dashclip/outputs
+      - key: UPLOAD_DIR
+        value: /tmp/dashclip/uploads
+      - key: TEMP_DIR
+        value: /tmp/dashclip/tmp
+      # Security
+      - key: SECRET_KEY
+        generateValue: true

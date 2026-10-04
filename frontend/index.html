@@ -230,13 +230,110 @@ label{display:block;font-family:var(--mono);font-size:10px;color:var(--sub);marg
 <!-- SETTINGS PANEL -->
 <div class="panel" id="panel-settings">
   <p class="section-tag">Configuration</p><h1>Settings</h1>
-  <div class="card" style="margin-bottom:12px"><div class="card-body">
-    <h3>AI Provider</h3>
-    <div id="ai-provider-info" class="info-box">Loading…</div>
-    <h3 style="margin-top:10px">Ollama Models</h3>
-    <div id="installed-models-list" style="font-family:var(--mono);font-size:10px;color:var(--sub);line-height:2">Detecting…</div>
-  </div></div>
+
+  <!-- AI Provider Card -->
+  <div class="card" style="margin-bottom:14px">
+    <div class="card-body">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+        <h3 style="margin:0">AI Provider</h3>
+        <div id="ai-status-badge" style="font-family:var(--mono);font-size:9px;padding:3px 8px;border-radius:12px;background:var(--muted);color:var(--sub)">Checking…</div>
+      </div>
+
+      <!-- Provider toggle -->
+      <div style="display:flex;gap:6px;margin-bottom:12px">
+        <button class="btn btn-ghost btn-sm" id="pick-gemini" onclick="selectProviderUI('gemini')">🤖 Gemini (Cloud)</button>
+        <button class="btn btn-ghost btn-sm" id="pick-ollama" onclick="selectProviderUI('ollama')">🦙 Ollama (Local)</button>
+      </div>
+
+      <!-- Gemini config -->
+      <div id="gemini-config" style="display:none">
+        <div style="background:#0a0a14;border:1px solid #2a1a4a;border-radius:var(--r);padding:12px;margin-bottom:8px">
+          <p style="font-family:var(--mono);font-size:9px;color:var(--purple);margin-bottom:6px">GOOGLE GEMINI — FREE TIER</p>
+          <p style="font-size:11px;color:var(--sub);margin-bottom:8px">1500 requests/day free. Get your key at <a href="https://aistudio.google.com/apikey" target="_blank" style="color:var(--amber)">aistudio.google.com/apikey</a></p>
+          <label>Gemini API Key</label>
+          <input type="password" id="gemini-key-input" placeholder="AIza…" style="margin-bottom:7px;font-family:var(--mono)"/>
+          <label>Model</label>
+          <select id="gemini-model-select" style="margin-bottom:7px">
+            <option value="gemini-2.0-flash">gemini-2.0-flash (recommended — fast + free)</option>
+            <option value="gemini-1.5-pro">gemini-1.5-pro (higher quality, lower limits)</option>
+            <option value="gemini-1.5-flash">gemini-1.5-flash (previous generation)</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- Ollama config -->
+      <div id="ollama-config" style="display:none">
+        <div style="background:#0a140a;border:1px solid #1a3a1a;border-radius:var(--r);padding:12px;margin-bottom:8px">
+          <p style="font-family:var(--mono);font-size:9px;color:var(--green);margin-bottom:6px">LOCAL OLLAMA — 100% PRIVATE</p>
+          <p style="font-size:11px;color:var(--sub);margin-bottom:8px">Requires Ollama running locally. <a href="https://ollama.com" target="_blank" style="color:var(--amber)">ollama.com</a></p>
+          <label>Ollama URL</label>
+          <input type="text" id="ollama-url-input" placeholder="http://127.0.0.1:11434" value="http://127.0.0.1:11434" style="margin-bottom:7px;font-family:var(--mono)"/>
+          <label>Primary Model</label>
+          <input type="text" id="ollama-model-input" placeholder="qwen2.5:7b" value="qwen2.5:7b" style="margin-bottom:4px;font-family:var(--mono)"/>
+          <div id="ollama-models-list" style="font-family:var(--mono);font-size:9px;color:var(--sub);margin-top:5px"></div>
+        </div>
+      </div>
+
+      <!-- Test + Save -->
+      <div class="btn-row">
+        <button class="btn btn-primary btn-sm" onclick="saveAIProvider()" id="save-ai-btn">💾 Save & Test</button>
+        <span id="ai-test-result" style="font-family:var(--mono);font-size:10px"></span>
+      </div>
+
+      <!-- Current status -->
+      <div id="ai-provider-info" class="info-box" style="margin-top:10px">Loading…</div>
+    </div>
+  </div>
+
   <div class="btn-row"><button class="btn btn-ghost" onclick="closeSettings()">← Back</button></div>
+</div>
+
+<!-- FIRST RUN MODAL -->
+<div id="first-run-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.92);z-index:9999;align-items:center;justify-content:center">
+  <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:28px;max-width:460px;width:90%">
+    <div style="font-size:32px;text-align:center;margin-bottom:8px">🎬</div>
+    <h1 style="text-align:center;margin-bottom:4px">Welcome to DashClip</h1>
+    <p style="text-align:center;color:var(--sub);font-size:13px;margin-bottom:20px">Choose your AI provider to get started</p>
+
+    <div style="display:flex;flex-direction:column;gap:10px;margin-bottom:20px">
+      <div class="provider-choice" id="choice-gemini" onclick="firstRunPickGemini()"
+           style="border:2px solid var(--border);border-radius:var(--r);padding:14px;cursor:pointer;transition:.15s">
+        <div style="display:flex;align-items:center;gap:10px">
+          <div style="font-size:24px">🤖</div>
+          <div>
+            <div style="font-weight:700;margin-bottom:2px">Cloud AI — Google Gemini</div>
+            <div style="font-size:11px;color:var(--sub)">Free API key required · Fast · No GPU needed · Works on any device</div>
+          </div>
+          <div style="margin-left:auto;font-family:var(--mono);font-size:9px;background:#0a1a0a;color:var(--green);padding:3px 8px;border-radius:10px">RECOMMENDED</div>
+        </div>
+      </div>
+
+      <div class="provider-choice" id="choice-ollama" onclick="firstRunPickOllama()"
+           style="border:2px solid var(--border);border-radius:var(--r);padding:14px;cursor:pointer;transition:.15s">
+        <div style="display:flex;align-items:center;gap:10px">
+          <div style="font-size:24px">🦙</div>
+          <div>
+            <div style="font-weight:700;margin-bottom:2px">Local AI — Ollama</div>
+            <div style="font-size:11px;color:var(--sub)">100% private · No API key · Needs 8GB RAM + Ollama installed</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Gemini key input (shown when gemini chosen) -->
+    <div id="first-run-gemini-section" style="display:none;margin-bottom:14px">
+      <label>Your Gemini API Key</label>
+      <input type="password" id="first-run-gemini-key" placeholder="AIza…" style="font-family:var(--mono)"/>
+      <p style="font-size:10px;color:var(--sub);margin-top:4px">Get free key: <a href="https://aistudio.google.com/apikey" target="_blank" style="color:var(--amber)">aistudio.google.com/apikey</a> → Create API Key</p>
+    </div>
+
+    <div id="first-run-ollama-section" style="display:none;margin-bottom:14px">
+      <div class="info-box">Make sure Ollama is running: <strong>ollama serve</strong><br/>Pull a model: <strong>ollama pull qwen2.5:7b</strong></div>
+    </div>
+
+    <button class="btn btn-primary" style="width:100%" id="first-run-btn" onclick="firstRunSave()">Get Started →</button>
+    <div id="first-run-error" style="margin-top:8px;font-family:var(--mono);font-size:10px;color:var(--red);display:none"></div>
+  </div>
 </div>
 
 <!-- CREATOR BRAIN PANEL -->
@@ -752,7 +849,10 @@ label{display:block;font-family:var(--mono);font-size:10px;color:var(--sub);marg
 <div id="toast"></div>
 <script>
 
-const API='http://127.0.0.1:8000';
+// Auto-detect API URL: same origin in production, localhost in dev
+const API = (window.location.hostname === '127.0.0.1' || window.location.hostname === 'localhost')
+  ? `${window.location.protocol}//${window.location.hostname}:${window.location.port || 8000}`
+  : window.location.origin;
 const S={
   projectId:null,scenes:[],clips:{},selected:{},
   voiceoverId:null,musicId:null,subtitleId:null,
@@ -1736,10 +1836,178 @@ function skipTemplates(){
   goToStep(1);
 }
 
+/* AI PROVIDER SETTINGS */
+let _currentProvider = 'gemini';
+let _firstRunChoice = null;
+
+async function loadModelSettings(){
+  try{
+    const status = await api('GET','/v4/ai-provider');
+    const badge = document.getElementById('ai-status-badge');
+    const info = document.getElementById('ai-provider-info');
+    const provider = status.provider || 'unknown';
+    _currentProvider = provider;
+
+    if(status.ok){
+      if(badge){badge.textContent='✓ Connected';badge.style.background='#0a1a0a';badge.style.color='var(--green)';}
+    } else {
+      if(badge){badge.textContent='✗ Not connected';badge.style.background='#1a0a0a';badge.style.color='var(--red)';}
+    }
+
+    if(info){
+      info.innerHTML = `Provider: <strong>${esc(provider.toUpperCase())}</strong> · Model: <strong>${esc(status.model||'—')}</strong>`
+        + (status.error ? `<br/><span style="color:var(--red)">${esc(status.error)}</span>` : '');
+    }
+
+    // Update badge in header
+    const headerBadge = document.getElementById('ai-provider-badge');
+    if(headerBadge){
+      headerBadge.textContent = provider==='gemini'?'🤖 Gemini':'🦙 Ollama';
+    }
+
+    // Show correct config section
+    selectProviderUI(provider);
+
+    // Pre-fill Ollama URL if known
+    if(status.ollama_url){
+      const u = document.getElementById('ollama-url-input');
+      if(u) u.value = status.ollama_url;
+    }
+    if(status.tier1_model){
+      const m = document.getElementById('ollama-model-input');
+      if(m) m.value = status.tier1_model;
+    }
+    if(status.installed_models?.length){
+      const el = document.getElementById('ollama-models-list');
+      if(el) el.textContent = 'Installed: ' + status.installed_models.join(', ');
+    }
+    if(status.gemini_model){
+      const sel = document.getElementById('gemini-model-select');
+      if(sel) sel.value = status.gemini_model;
+    }
+  }catch(e){
+    const info = document.getElementById('ai-provider-info');
+    if(info) info.textContent = 'Could not load AI status — check server.';
+  }
+}
+
+function selectProviderUI(provider){
+  _currentProvider = provider;
+  const gc = document.getElementById('gemini-config');
+  const oc = document.getElementById('ollama-config');
+  const pg = document.getElementById('pick-gemini');
+  const po = document.getElementById('pick-ollama');
+  if(gc) gc.style.display = provider==='gemini'?'block':'none';
+  if(oc) oc.style.display = provider==='ollama'?'block':'none';
+  if(pg) pg.className = provider==='gemini'?'btn btn-primary btn-sm':'btn btn-ghost btn-sm';
+  if(po) po.className = provider==='ollama'?'btn btn-primary btn-sm':'btn btn-ghost btn-sm';
+}
+
+async function saveAIProvider(){
+  const btn = document.getElementById('save-ai-btn');
+  const result = document.getElementById('ai-test-result');
+  setLoading(btn, true, 'Testing…');
+  if(result){result.textContent='';result.style.color='var(--sub)';}
+  try{
+    const payload = {provider: _currentProvider};
+    if(_currentProvider==='gemini'){
+      const key = document.getElementById('gemini-key-input')?.value?.trim();
+      if(!key){toast('Enter your Gemini API key','err');setLoading(btn,false,'💾 Save & Test');return;}
+      payload.gemini_api_key = key;
+      payload.gemini_model = document.getElementById('gemini-model-select')?.value || 'gemini-2.0-flash';
+    } else {
+      payload.ollama_url = document.getElementById('ollama-url-input')?.value || 'http://127.0.0.1:11434';
+      payload.ollama_model = document.getElementById('ollama-model-input')?.value || 'qwen2.5:7b';
+    }
+    const d = await api('POST','/v4/ai-provider/configure', payload);
+    const test = d.test || {};
+    if(test.ok){
+      if(result){result.textContent='✓ Connected — ' + (test.model||'');result.style.color='var(--green)';}
+      toast('AI provider saved and connected ✓');
+      loadModelSettings();
+    } else {
+      const err = test.error || 'Connection failed';
+      if(result){result.textContent='✗ ' + err;result.style.color='var(--red)';}
+      toast(err,'err');
+    }
+  }catch(e){
+    if(result){result.textContent='✗ ' + e.message;result.style.color='var(--red)';}
+    toast(e.message,'err');
+  }finally{setLoading(btn,false,'💾 Save & Test');}
+}
+
+/* FIRST RUN */
+function firstRunPickGemini(){
+  _firstRunChoice = 'gemini';
+  document.getElementById('choice-gemini').style.borderColor='var(--amber)';
+  document.getElementById('choice-ollama').style.borderColor='var(--border)';
+  document.getElementById('first-run-gemini-section').style.display='block';
+  document.getElementById('first-run-ollama-section').style.display='none';
+}
+function firstRunPickOllama(){
+  _firstRunChoice = 'ollama';
+  document.getElementById('choice-ollama').style.borderColor='var(--amber)';
+  document.getElementById('choice-gemini').style.borderColor='var(--border)';
+  document.getElementById('first-run-gemini-section').style.display='none';
+  document.getElementById('first-run-ollama-section').style.display='block';
+}
+async function firstRunSave(){
+  if(!_firstRunChoice){toast('Pick a provider first','err');return;}
+  const btn = document.getElementById('first-run-btn');
+  const errEl = document.getElementById('first-run-error');
+  setLoading(btn,true,'Testing connection…');
+  errEl.style.display='none';
+  try{
+    const payload = {provider: _firstRunChoice};
+    if(_firstRunChoice==='gemini'){
+      const key = document.getElementById('first-run-gemini-key')?.value?.trim();
+      if(!key){
+        errEl.textContent='Enter your Gemini API key to continue.';
+        errEl.style.display='block';
+        setLoading(btn,false,'Get Started →');
+        return;
+      }
+      payload.gemini_api_key = key;
+      payload.gemini_model = 'gemini-2.0-flash';
+    } else {
+      payload.ollama_url = 'http://127.0.0.1:11434';
+      payload.ollama_model = 'qwen2.5:7b';
+    }
+    const d = await api('POST','/v4/ai-provider/configure', payload);
+    const test = d.test || {};
+    if(test.ok){
+      localStorage.setItem('dc_provider_configured','1');
+      document.getElementById('first-run-modal').style.display='none';
+      toast('AI connected ✓ Ready to create videos!');
+      loadModelSettings();
+    } else {
+      errEl.textContent = test.error || 'Connection failed. Check your key and try again.';
+      errEl.style.display='block';
+    }
+  }catch(e){
+    errEl.textContent = e.message;
+    errEl.style.display='block';
+  }finally{setLoading(btn,false,'Get Started →');}
+}
+
+async function checkFirstRun(){
+  // Show first-run modal if AI not configured
+  if(localStorage.getItem('dc_provider_configured')) return;
+  try{
+    const status = await api('GET','/v4/ai-provider');
+    if(!status.ok){
+      document.getElementById('first-run-modal').style.display='flex';
+    }
+  }catch(e){
+    document.getElementById('first-run-modal').style.display='flex';
+  }
+}
+
 /* INIT */
 loadVoiceOptions();
 loadTemplateLibrary();
 loadTemplates();
+checkFirstRun();
 document.getElementById('field-scene-count').addEventListener('input',function(){this._userEdited=true;});
 api('GET','/v4/ai-provider').then(d=>{const badge=document.getElementById('ai-provider-badge');if(badge)badge.textContent=d.provider==='claude'?'🤖 Claude API':'🦙 Ollama';}).catch(()=>{});
 

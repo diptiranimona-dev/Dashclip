@@ -1,0 +1,53 @@
+# ── Secrets ───────────────────────────────────────────────────
+.env
+*.env
+!.env.example
+
+# ── Python ────────────────────────────────────────────────────
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.Python
+*.egg-info/
+dist/
+build/
+*.egg
+
+# ── Virtual environments ──────────────────────────────────────
+.venv/
+venv/
+env/
+ENV/
+
+# ── Generated media (never commit) ───────────────────────────
+backend/outputs/
+backend/uploads/
+backend/tmp/
+outputs/
+uploads/
+tmp/
+/tmp/
+
+# ── Database ──────────────────────────────────────────────────
+*.sqlite3
+*.db
+*.sql.backup
+
+# ── IDE ───────────────────────────────────────────────────────
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# ── OS ────────────────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# ── Render ────────────────────────────────────────────────────
+.render/
+
+# ── Node (if added later) ─────────────────────────────────────
+node_modules/

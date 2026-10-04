@@ -252,10 +252,18 @@ async def run_render(job_id, project_id, clip_urls, voiceover_path=None,
         else:
             shutil.copy(current, final)
 
+        # Upload to Supabase Storage (no-op if STORAGE_BACKEND=local)
+        output_url = storage_service.upload_file(final, f"outputs/{final_name}")
+        print(f"[render] output URL: {output_url}")
+
         conn = get_db()
         execute(conn,
             "UPDATE render_jobs SET status='completed',progress=100,output_path=%s,updated_at=NOW() WHERE job_id=%s",
-            (str(final), job_id))
+            (output_url, job_id))
+        # Also update project status
+        execute(conn,
+            "UPDATE projects SET status='rendered',output_video_path=%s,updated_at=NOW() WHERE id=%s",
+            (output_url, project_id))
         conn.commit(); conn.close()
 
     except Exception as e:
@@ -267,9 +275,17 @@ async def get_render_status(job_id):
     row = fetchone(conn, "SELECT * FROM render_jobs WHERE job_id=%s", (job_id,))
     conn.close()
     if not row: raise ValueError("Job not found")
+    out = row.get("output_path") or ""
+    # If already a full URL (Supabase CDN), use directly
+    if out.startswith("http"):
+        output_url = out
+    elif out:
+        output_url = f"/outputs/{Path(out).name}"
+    else:
+        output_url = None
     return {
         "status":   row["status"],
         "progress": row["progress"] or 0,
-        "output":   f"/outputs/{Path(row['output_path']).name}" if row.get("output_path") else None,
+        "output":   output_url,
         "error":    row.get("error_message"),
     }

@@ -39,13 +39,10 @@ import services.template_service as template_service
 import services.research_service as research_service
 import services.analytics_service as analytics_service
 
-OUTPUT_DIR = Path(os.getenv("OUTPUT_DIR", "./outputs"))
-UPLOAD_DIR = Path(os.getenv("UPLOAD_DIR", "./uploads"))
-OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
-UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
-(UPLOAD_DIR / "voices").mkdir(exist_ok=True)
-(UPLOAD_DIR / "music").mkdir(exist_ok=True)
-(UPLOAD_DIR / "images").mkdir(exist_ok=True)
+# Paths managed by storage_service (local or Supabase)
+import services.storage_service as _ss_early
+OUTPUT_DIR = _ss_early.OUTPUT_DIR
+UPLOAD_DIR = _ss_early.UPLOAD_DIR
 
 
 def init_db():
@@ -280,9 +277,22 @@ async def lifespan(app: FastAPI):
     yield
 
 app = FastAPI(title="DashClip V4", lifespan=lifespan)
-app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
-app.mount("/outputs", StaticFiles(directory=str(OUTPUT_DIR)), name="outputs")
-app.mount("/uploads", StaticFiles(directory=str(UPLOAD_DIR)), name="uploads")
+# Production: set ALLOWED_ORIGINS=https://your-app.onrender.com in env
+_raw_origins = os.getenv("ALLOWED_ORIGINS", "*")
+_allowed_origins = [o.strip() for o in _raw_origins.split(",")] if _raw_origins != "*" else ["*"]
+app.add_middleware(CORSMiddleware,
+    allow_origins=_allowed_origins,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"])
+# Only mount local static dirs — in production files are on Supabase Storage
+import services.storage_service as storage_service
+_out_dir = storage_service.OUTPUT_DIR
+_up_dir  = storage_service.UPLOAD_DIR
+_out_dir.mkdir(parents=True, exist_ok=True)
+_up_dir.mkdir(parents=True, exist_ok=True)
+app.mount("/outputs", StaticFiles(directory=str(_out_dir)), name="outputs")
+app.mount("/uploads", StaticFiles(directory=str(_up_dir)),  name="uploads")
 static_dir = Path(__file__).parent / "static"
 if static_dir.exists():
     app.mount("/static", StaticFiles(directory=str(static_dir)), name="static")
@@ -849,19 +859,19 @@ async def upload_custom_clip(project_id: int = Form(...), file: UploadFile = Fil
 
 @app.post("/images/upload")
 async def upload_image(project_id: int = Form(...), file: UploadFile = File(...)):
-    img_dir = UPLOAD_DIR / "images"
-    img_dir.mkdir(exist_ok=True)
+    import services.storage_service as _ss
     ext = Path(file.filename).suffix or ".jpg"
     safe = f"{project_id}_{uuid.uuid4().hex[:10]}{ext}"
-    dest = img_dir / safe
+    dest = _ss.get_upload_path("images", safe)
     data = await file.read()
     dest.write_bytes(data)
+    public = _ss.upload_file(dest, f"images/{safe}")
     conn = get_db()
     row = execute(conn,
         "INSERT INTO project_assets (project_id,asset_type,file_path,original_name) VALUES (%s,'image',%s,%s) RETURNING id",
         (project_id, str(dest), file.filename))
     conn.commit(); conn.close()
-    return {"id": row["id"], "url": f"/uploads/images/{safe}", "file_path": str(dest), "original_name": file.filename}
+    return {"id": row["id"], "url": public, "file_path": str(dest), "original_name": file.filename}
 
 @app.get("/projects/{project_id}/images")
 async def get_images(project_id: int):
@@ -1216,24 +1226,91 @@ async def improve_script_section(body: dict):
 
 @app.get("/v4/ai-provider")
 async def ai_provider_info():
-    status = await ai_provider.get_status()
-    return {
-        "provider": "ollama",
-        "model": status.get("active_model", "qwen2.5:7b"),
-        "tier1": status.get("tier1_model"),
-        "tier2": status.get("tier2_model"),
-        "tier3": status.get("tier3_model"),
-        "tier1_available": status.get("tier1_available"),
-        "tier2_available": status.get("tier2_available"),
-        "tier3_available": status.get("tier3_available"),
-    }
+    """Returns full AI provider status for settings UI."""
+    return await ai_provider.get_status()
+
+@app.post("/v4/ai-provider/test")
+async def test_ai_provider():
+    """Real connection test — actually calls the provider. Never fakes success."""
+    result = await ai_provider.test_connection()
+    status_code = 200 if result["ok"] else 503
+    from fastapi.responses import JSONResponse
+    return JSONResponse(content=result, status_code=status_code)
+
+@app.get("/v4/ai-provider/models")
+async def list_ai_models():
+    """List available models for current provider."""
+    return await ai_provider.get_available_models()
+
+class AIProviderConfigReq(BaseModel):
+    provider: str           # "gemini" or "ollama"
+    gemini_api_key: str = ""
+    gemini_model: str = "gemini-2.0-flash"
+    ollama_url: str = "http://127.0.0.1:11434"
+    ollama_model: str = "qwen2.5:7b"
+
+@app.post("/v4/ai-provider/configure")
+async def configure_ai_provider(req: AIProviderConfigReq):
+    """
+    Update AI provider config at runtime.
+    Keys are stored server-side only — never returned to frontend.
+    In production: update env vars in Render dashboard instead.
+    """
+    import services.ai_provider_service as _ai
+    if req.provider == "gemini":
+        if not req.gemini_api_key:
+            raise HTTPException(400, "Gemini API key required")
+        # Set at module level for this process
+        os.environ["GEMINI_API_KEY"] = req.gemini_api_key
+        os.environ["GEMINI_MODEL"] = req.gemini_model or "gemini-2.0-flash"
+        os.environ["DASHCLIP_AI_PROVIDER"] = "gemini"
+        # Reload module globals
+        _ai.GEMINI_API_KEY = req.gemini_api_key
+        _ai.GEMINI_MODEL = req.gemini_model or "gemini-2.0-flash"
+        _ai._PROVIDER_ENV = "gemini"
+    elif req.provider == "ollama":
+        os.environ["DASHCLIP_AI_PROVIDER"] = "ollama"
+        os.environ["OLLAMA_URL"] = req.ollama_url or "http://127.0.0.1:11434"
+        os.environ["DASHCLIP_AI_MODEL"] = req.ollama_model or "qwen2.5:7b"
+        _ai.OLLAMA_URL = req.ollama_url or "http://127.0.0.1:11434"
+        _ai.MODEL_PRIMARY = req.ollama_model or "qwen2.5:7b"
+        _ai._PROVIDER_ENV = "ollama"
+        _ai._model_cache.clear()
+    else:
+        raise HTTPException(400, f"Unknown provider: {req.provider}")
+    # Test the new config
+    test = await _ai.test_connection()
+    return {"configured": True, "test": test}
 
 
 # ── SYSTEM ────────────────────────────────────────────────────────────────────
 
 @app.get("/health")
 async def health():
-    return {"status": "ok", "version": "4.0.0", "ai_provider": ai_provider.get_provider()}
+    """Production health check — Render pings this every 30s."""
+    import services.storage_service as _ss
+    db_ok = False
+    try:
+        conn = get_db()
+        fetchone(conn, "SELECT 1 as ok", ())
+        conn.close()
+        db_ok = True
+    except Exception as e:
+        print(f"[health] DB check failed: {e}")
+    ai_status = {}
+    try:
+        ai_status = await ai_provider.get_status()
+    except Exception:
+        ai_status = {"provider": ai_provider.get_provider(), "ok": False}
+    return {
+        "status": "ok" if db_ok else "degraded",
+        "version": "4.0.0",
+        "db": "ok" if db_ok else "error",
+        "storage": _ss.STORAGE_BACKEND,
+        "ai_provider": ai_status.get("provider", "unknown"),
+        "ai_ok": ai_status.get("ok", False),
+        "ai_model": ai_status.get("model", "unknown"),
+    }
 
 @app.get("/ads/config")
 async def ads_config():
