@@ -1,27 +1,10 @@
-# DashClip V4 — Complete Python dependencies
-# Generated for Render deployment
-
-# Core web framework
 fastapi==0.115.0
 uvicorn[standard]==0.30.6
 python-multipart==0.0.9
-starlette==0.41.2
-
-# Database
 psycopg2-binary==2.9.9
-
-# HTTP client (async + sync both used)
 httpx==0.27.2
 aiofiles==24.1.0
-
-# Environment
 python-dotenv==1.0.1
-
-# Supabase storage client
 supabase==2.7.4
-
-# Image processing (for thumbnails)
 Pillow==10.4.0
-
-# Utilities
 python-jose==3.3.0
