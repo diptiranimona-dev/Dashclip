@@ -105,7 +105,8 @@ async def _test_gemini() -> dict:
     try:
         async with httpx.AsyncClient(timeout=15) as c:
             r = await c.post(
-                f"{GEMINI_API_BASE}/models/{GEMINI_MODEL}:generateContent?key={GEMINI_API_KEY}",
+                f"{GEMINI_API_BASE}/models/{GEMINI_MODEL}:generateContent",
+                    headers={"x-goog-api-key": GEMINI_API_KEY, "Content-Type": "application/json"},
                 json={"contents": [{"parts": [{"text": "Reply with exactly: OK"}]}],
                       "generationConfig": {"maxOutputTokens": 10}}
             )
@@ -191,7 +192,8 @@ async def _gemini_ask(prompt: str, system: str = "", timeout: int = 60) -> str:
         try:
             async with httpx.AsyncClient(timeout=float(timeout)) as c:
                 r = await c.post(
-                    f"{GEMINI_API_BASE}/models/{GEMINI_MODEL}:generateContent?key={GEMINI_API_KEY}",
+                    f"{GEMINI_API_BASE}/models/{GEMINI_MODEL}:generateContent",
+                    headers={"x-goog-api-key": GEMINI_API_KEY, "Content-Type": "application/json"},
                     json=payload
                 )
             if r.status_code == 200:
@@ -258,7 +260,8 @@ async def _gemini_ask_json(prompt: str, system: str = "", timeout: int = 60) -> 
         try:
             async with httpx.AsyncClient(timeout=float(timeout)) as c:
                 r = await c.post(
-                    f"{GEMINI_API_BASE}/models/{GEMINI_MODEL}:generateContent?key={GEMINI_API_KEY}",
+                    f"{GEMINI_API_BASE}/models/{GEMINI_MODEL}:generateContent",
+                    headers={"x-goog-api-key": GEMINI_API_KEY, "Content-Type": "application/json"},
                     json=payload
                 )
             if r.status_code == 200:
