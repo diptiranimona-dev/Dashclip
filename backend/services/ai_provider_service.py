@@ -107,8 +107,8 @@ async def _test_gemini() -> dict:
             r = await c.post(
                 f"{GEMINI_API_BASE}/models/{GEMINI_MODEL}:generateContent",
                     headers={"x-goog-api-key": GEMINI_API_KEY, "Content-Type": "application/json"},
-                json={"contents": [{"parts": [{"text": "Reply with exactly: OK"}]}],
-                      "generationConfig": {"maxOutputTokens": 10}}
+                json={"contents": [{"role": "user", "parts": [{"text": "Reply OK"}]}],
+                      "generationConfig": {"maxOutputTokens": 5}}
             )
         if r.status_code == 200:
             return {"ok": True, "provider": "gemini", "model": GEMINI_MODEL, "error": None}
@@ -178,14 +178,7 @@ async def _gemini_ask(prompt: str, system: str = "", timeout: int = 60) -> str:
         "generationConfig": {
             "temperature": 0.7,
             "maxOutputTokens": 8192,
-            "responseMimeType": "text/plain",
-        },
-        "safetySettings": [
-            {"category": "HARM_CATEGORY_HARASSMENT",       "threshold": "BLOCK_NONE"},
-            {"category": "HARM_CATEGORY_HATE_SPEECH",      "threshold": "BLOCK_NONE"},
-            {"category": "HARM_CATEGORY_SEXUALLY_EXPLICIT","threshold": "BLOCK_NONE"},
-            {"category": "HARM_CATEGORY_DANGEROUS_CONTENT","threshold": "BLOCK_NONE"},
-        ]
+        }
     }
 
     for attempt in range(2):
@@ -246,14 +239,7 @@ async def _gemini_ask_json(prompt: str, system: str = "", timeout: int = 60) -> 
         "generationConfig": {
             "temperature": 0.3,
             "maxOutputTokens": 8192,
-            "responseMimeType": "application/json",
-        },
-        "safetySettings": [
-            {"category": "HARM_CATEGORY_HARASSMENT",       "threshold": "BLOCK_NONE"},
-            {"category": "HARM_CATEGORY_HATE_SPEECH",      "threshold": "BLOCK_NONE"},
-            {"category": "HARM_CATEGORY_SEXUALLY_EXPLICIT","threshold": "BLOCK_NONE"},
-            {"category": "HARM_CATEGORY_DANGEROUS_CONTENT","threshold": "BLOCK_NONE"},
-        ]
+        }
     }
 
     for attempt in range(2):
